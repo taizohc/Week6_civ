@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Change Blindness — Attention Experiment</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0c0e;--surface:#141416;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#eeebe6;--text2:#888480;--text3:#504e4c;
+  --accent:#dfc98a;--accent2:#b89f5a;
+  --green:#2d8a52;--red:#a03030;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:300}
+#app{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1.25rem}
+.screen{display:none;width:100%;max-width:780px}
+.screen.active{display:block}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:.9rem}
+h1{font-size:clamp(26px,4.5vw,44px);font-weight:300;line-height:1.1;letter-spacing:-.02em;margin-bottom:1.4rem}
+h2{font-size:clamp(19px,3vw,26px);font-weight:300;letter-spacing:-.01em;margin-bottom:.9rem}
+p{font-size:15px;line-height:1.75;color:var(--text2);margin-bottom:.9rem;max-width:580px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 26px;border:1px solid var(--border2);background:transparent;color:var(--text);font-family:var(--mono);font-size:12px;letter-spacing:.08em;cursor:pointer;transition:all .18s;text-transform:uppercase}
+.btn:hover{border-color:var(--accent2);color:var(--accent);background:rgba(184,159,90,.05)}
+.btn-primary{background:var(--accent);color:#0c0c0e;border-color:var(--accent);font-weight:500}
+.btn-primary:hover{background:var(--accent2);border-color:var(--accent2);color:#0c0c0e}
+.scene-wrap{width:100%;border:1px solid var(--border);position:relative;margin:1.25rem 0;background:#0a0a0c;overflow:hidden;cursor:default}
+.scene-wrap canvas{display:block;width:100%;height:auto}
+.scan-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 3px);pointer-events:none}
+.cam-badge{position:absolute;top:10px;right:10px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:rgba(255,255,255,0.35);background:rgba(0,0,0,0.55);padding:3px 8px;pointer-events:none}
+.progress-track{width:100%;height:2px;background:var(--border);margin-bottom:1.5rem}
+.progress-fill{height:100%;background:var(--accent);transition:width .1s linear;width:100%}
+.instr{border-left:2px solid var(--accent2);padding:10px 16px;margin-bottom:1.4rem;background:rgba(184,159,90,.03)}
+.instr p{font-family:var(--mono);font-size:12px;letter-spacing:.03em;color:var(--text2);margin:0;max-width:none}
+.change-list{list-style:none;margin:.75rem 0 1.4rem}
+.change-list li{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;color:var(--text2)}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.dot-found{background:var(--green)}.dot-missed{background:var(--red)}
+.stage-tag{font-family:var(--mono);font-size:10px;color:var(--text3);min-width:54px;padding-top:1px}
+.results-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.4rem 0}
+.result-cell{background:var(--surface);padding:1.4rem}
+.result-cell .num{font-family:var(--mono);font-size:38px;font-weight:400;color:var(--accent);line-height:1;margin-bottom:.4rem}
+.result-cell .lbl{font-size:12px;color:var(--text3);line-height:1.5}
+.insight{border:1px solid var(--border2);padding:1.4rem;margin:1.4rem 0;background:var(--surface);position:relative}
+.insight::before{content:'';position:absolute;top:0;left:0;width:100%;height:2px;background:linear-gradient(90deg,var(--accent2),transparent)}
+.insight h3{font-family:var(--mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--accent2);margin-bottom:.7rem}
+.insight p{font-size:14px;line-height:1.8;color:var(--text2);margin:0;max-width:none}
+.quiz-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.quiz-item input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.quiz-item label{font-size:14px;color:var(--text2);cursor:pointer;line-height:1.5}
+.stage-indicator{display:flex;gap:6px;margin-bottom:2rem;align-items:center}
+.stage-pip{width:24px;height:2px;background:var(--border2)}
+.stage-pip.active{background:var(--accent)}
+.stage-indicator span{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;margin-left:4px}
+.status-line{font-family:var(--mono);font-size:12px;color:var(--text3);min-height:20px;margin-bottom:.5rem}
+#click-feedback{font-family:var(--mono);font-size:13px;min-height:22px;margin-bottom:.6rem}
+.fb-correct{color:var(--green)}.fb-wrong{color:var(--red)}
+.hr-div{border:none;border-top:1px solid var(--border);margin:1.4rem 0}
+@media(max-width:480px){.results-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div id="s-intro" class="screen active">
+  <div class="eyebrow">Attention Experiment — Two Stages</div>
+  <h1>Can you trust<br>your own attention?</h1>
+  <p>This experiment has two stages. In each you will be asked to watch carefully — but what "watching carefully" means will be very different. Together they reveal something uncomfortable about what human oversight actually is.</p>
+  <div class="instr"><p>Stage 1 — Track a ball under three identical cups &nbsp;/&nbsp; Stage 2 — Watch a security camera feed</p></div>
+  <button class="btn btn-primary" onclick="show('s-stage1-intro')">BEGIN &rarr;</button>
+</div>
+
+<div id="s-stage1-intro" class="screen">
+  <div class="stage-indicator"><div class="stage-pip active"></div><div class="stage-pip"></div><span>STAGE 1 OF 2</span></div>
+  <div class="eyebrow">The ball and cups</div>
+  <h2>Your task</h2>
+  <p>A ball will be placed under one of three identical cups. The cups will then shuffle. Your job is to keep track of which cup is hiding the ball — and click it when the shuffle stops.</p>
+  <p>That is all you need to do. Focus entirely on the ball.</p>
+  <div class="instr"><p>The room around you will also be visible. You do not need to pay attention to it. Just track the ball.</p></div>
+  <button class="btn btn-primary" onclick="beginStage1()">START STAGE 1 &rarr;</button>
+</div>
+
+<div id="s-stage1" class="screen">
+  <div class="stage-indicator"><div class="stage-pip active"></div><div class="stage-pip"></div><span>STAGE 1 OF 2</span></div>
+  <div class="eyebrow">The ball and cups</div>
+  <h2>Track the ball</h2>
+  <div class="instr"><p id="s1-instr">The ball is under one cup. Study the room. Click Ready when you want the shuffle to begin.</p></div>
+  <div class="scene-wrap" id="sw1"><canvas id="c1" width="780" height="380"></canvas><div class="scan-overlay"></div></div>
+  <div class="progress-track"><div class="progress-fill" id="bar1"></div></div>
+  <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.75rem">
+    <button class="btn btn-primary" id="ready-btn" onclick="beginShuffle()">READY — START SHUFFLE &rarr;</button>
+    <div class="status-line" id="s1-status" style="margin:0"></div>
+  </div>
+  <div id="click-feedback"></div>
+</div>
+
+<div id="s-between" class="screen">
+  <div class="stage-indicator"><div class="stage-pip active"></div><div class="stage-pip"></div><span>STAGE 1 — RESULTS</span></div>
+  <h2>Did you notice the room?</h2>
+  <p>While you tracked the ball, the room around you was changing. Here is what happened behind you.</p>
+  <ul class="change-list" id="s1-changes"></ul>
+  <p style="font-size:13px;color:var(--text3);font-family:var(--mono);letter-spacing:.04em;margin-bottom:.75rem">BEFORE &amp; AFTER — DIFFERENCES MARKED</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:1.4rem">
+    <div style="background:var(--surface);padding:.5rem">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;margin-bottom:.4rem">BEFORE</div>
+      <canvas id="c-before" width="780" height="380" style="width:100%;display:block"></canvas>
+    </div>
+    <div style="background:var(--surface);padding:.5rem">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;margin-bottom:.4rem">AFTER (changes circled)</div>
+      <canvas id="c-after" width="780" height="380" style="width:100%;display:block"></canvas>
+    </div>
+  </div>
+  <div class="insight">
+    <h3>What this shows</h3>
+    <p>Focused attention is a spotlight — it illuminates one thing and darkens everything else. This is not carelessness. It is how perception is structured. Now we remove the spotlight entirely and see what happens.</p>
+  </div>
+  <button class="btn btn-primary" onclick="startStage2()">CONTINUE TO STAGE 2 &rarr;</button>
+</div>
+
+<div id="s-stage2" class="screen">
+  <div class="stage-indicator"><div class="stage-pip active"></div><div class="stage-pip active"></div><span>STAGE 2 OF 2</span></div>
+  <div class="eyebrow">Security camera feed</div>
+  <h2>Watch carefully</h2>
+  <div class="instr"><p>Nothing specific to track. Just watch. Notice everything you can.</p></div>
+  <div class="scene-wrap"><canvas id="c2" width="780" height="380"></canvas><div class="scan-overlay"></div><div class="cam-badge" id="cam-time">CAM-01 &nbsp; 00:00</div></div>
+  <div class="progress-track"><div class="progress-fill" id="bar2"></div></div>
+  <div class="status-line">Changes may occur at any time.</div>
+</div>
+
+<div id="s-quiz" class="screen">
+  <div class="stage-indicator"><div class="stage-pip active"></div><div class="stage-pip active"></div><span>STAGE 2 — RECALL</span></div>
+  <h2>What changed in the feed?</h2>
+  <p>Select every change you believe you detected. Some options are decoys.</p>
+  <div id="quiz-items"></div>
+  <br>
+  <button class="btn btn-primary" onclick="scoreQuiz()">SUBMIT &rarr;</button>
+</div>
+
+<div id="s-final" class="screen">
+  <div class="eyebrow">Experiment complete</div>
+  <h2>Both stages. One finding.</h2>
+  <div class="results-grid">
+    <div class="result-cell"><div class="num" id="r1">—</div><div class="lbl">Ball tracked correctly<br>(stage 1)</div></div>
+    <div class="result-cell"><div class="num" id="r2">—</div><div class="lbl">Changes detected<br>(stage 2)</div></div>
+  </div>
+  <p style="font-size:13px;color:var(--text3);font-family:var(--mono);letter-spacing:.04em;margin-bottom:.4rem">FULL CHANGE LOG</p>
+  <ul class="change-list" id="full-log"></ul>
+  <div class="insight"><h3>The finding</h3><p id="final-insight"></p></div>
+  <p style="font-size:13px;color:var(--text3);line-height:1.7;max-width:560px;margin-top:.75rem">Think about what this means for human oversight of automated systems. If you miss changes when focused on one thing, and also miss them when watching everything — when exactly is attention a reliable safeguard?</p>
+  <hr class="hr-div">
+  <button class="btn" onclick="restart()">RESTART</button>
+</div>
+
+</div>
+<script>
+const W=780,H=380;
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ═══════════════════ STAGE 1 ═══════════════════
+
+let s1RAF=null,s1BallTracked=false,s1PlayerCorrect=false;
+let s1BallCup=0;
+let s1ChangesMade=[];
+let s1ActiveChanges=[];
+let s1InitBallCup=0;
+let s1Shuffles=[];
+let s1ShuffleDur=0;
+let s1BallVisible=true;
+
+// cup positions (updated during shuffle animation)
+let cups=[{x:160},{x:390},{x:620}];
+
+// room state
+let room={};
+
+function resetRoom(){
+  room={
+    curtainR:138, curtainG:42,  curtainB:26,
+    // 6 individually tracked book colors [r,g,b] — indices spread across the shelf
+    bk:[
+      [138,58,26],   // 0 orange-brown
+      [26,74,122],   // 1 blue
+      [90,58,138],   // 2 purple
+      [42,106,58],   // 3 green
+      [122,90,26],   // 4 gold
+      [106,26,42],   // 5 crimson
+    ],
+    lampT:0,
+    clockH:2, clockM:10,
+    mugAlpha:1.0,
+    frameR:106, frameG:90, frameB:58,
+    bottleOnShelf:true,
+    candleAlpha:1.0,
+    vaseR:74, vaseG:58, vaseB:122,
+  };
+}
+
+// Target book colors to shift TO — very different from originals
+const BK_TARGETS=[
+  [26,170,138],   // 0 → teal
+  [200,80,26],    // 1 → burnt orange
+  [26,122,170],   // 2 → sky blue
+  [170,26,90],    // 3 → hot pink
+  [26,80,170],    // 4 → royal blue
+  [26,160,60],    // 5 → bright green
+];
+
+const ALL_S1=[
+  {
+    key:'curtainColor',
+    desc:'The curtains slowly shifted colour during the shuffle',
+    duration:7000,
+    shuffleOnly:true,
+    alwaysOn:true,
+    apply:(t)=>{ room.curtainR=138+(26-138)*t; room.curtainG=42+(122-42)*t; room.curtainB=26+(106-26)*t; }
+  },
+  {
+    key:'bookColors',
+    desc:'Several books on the shelf changed colour simultaneously',
+    duration:5000,
+    alwaysOn:true,
+    apply:(t)=>{
+      for(let i=0;i<6;i++){
+        const from=[[138,58,26],[26,74,122],[90,58,138],[42,106,58],[122,90,26],[106,26,42]][i];
+        const to=BK_TARGETS[i];
+        room.bk[i][0]=from[0]+(to[0]-from[0])*t;
+        room.bk[i][1]=from[1]+(to[1]-from[1])*t;
+        room.bk[i][2]=from[2]+(to[2]-from[2])*t;
+      }
+    }
+  },
+  {
+    key:'vaseColor',
+    desc:'The vase on the mantle gradually changed colour',
+    duration:4500,
+    alwaysOn:true,
+    apply:(t)=>{ room.vaseR=74+(170-74)*t; room.vaseG=58+(26-58)*t; room.vaseB=122+(26-122)*t; }
+  },
+  {
+    key:'lampStyle',
+    desc:'The desk lamp subtly changed shape',
+    duration:4000,
+    apply:(t)=>{ room.lampT=t; }
+  },
+  {
+    key:'clockHands',
+    desc:'The clock changed to a completely different time',
+    duration:200,
+    apply:(t)=>{ room.clockH=8; room.clockM=55; }
+  },
+  {
+    key:'mugAlpha',
+    desc:'The mug on the side table gradually faded away',
+    duration:4500,
+    apply:(t)=>{ room.mugAlpha=1-t; }
+  },
+  {
+    key:'pictureFrame',
+    desc:'The picture frame slowly shifted colour',
+    duration:4500,
+    apply:(t)=>{ room.frameR=106+(26-106)*t; room.frameG=90+(122-90)*t; room.frameB=58+(42-58)*t; }
+  },
+  {
+    key:'candleAlpha',
+    desc:'The candle flame on the mantle slowly extinguished',
+    duration:3000,
+    apply:(t)=>{ room.candleAlpha=1-t; }
+  },
+];
+
+function beginStage1(){
+  startStage1();
+}
+
+function genShuffles(n){
+  let arr=[];
+  for(let i=0;i<n;i++){
+    let a=Math.floor(Math.random()*3),b;
+    do{b=Math.floor(Math.random()*3)}while(b===a);
+    arr.push({a,b,dur:480+Math.random()*280});
+  }
+  return arr;
+}
+
+// Returns animated cup positions and current ballCup index at time t into shuffle
+function shuffleAt(t){
+  let pos=[160,390,620];
+  let bc=s1InitBallCup;
+  let cursor=0;
+  for(let i=0;i<s1Shuffles.length;i++){
+    let sh=s1Shuffles[i];
+    if(t<cursor+sh.dur){
+      let p=(t-cursor)/sh.dur;
+      p=p<.5?2*p*p:-1+(4-2*p)*p;
+      let ax=pos[sh.a],bx=pos[sh.b];
+      // cups arc past each other vertically
+      let liftA=Math.sin(p*Math.PI)*-28;
+      let liftB=Math.sin(p*Math.PI)*28;
+      let rpos=[...pos];
+      rpos[sh.a]=ax+(bx-ax)*p;
+      rpos[sh.b]=bx+(ax-bx)*p;
+      return{pos:rpos,ballCup:bc,liftA,liftB,swapA:sh.a,swapB:sh.b};
+    }
+    cursor+=sh.dur;
+    let tmp=pos[sh.a];pos[sh.a]=pos[sh.b];pos[sh.b]=tmp;
+    if(bc===sh.a)bc=sh.b; else if(bc===sh.b)bc=sh.a;
+  }
+  return{pos,ballCup:bc,liftA:0,liftB:0,swapA:-1,swapB:-1};
+}
+
+function drawRoom(ctx,elapsed,cupLifts){
+  ctx.clearRect(0,0,W,H);
+
+  // floor boards
+  for(let x=0;x<W;x+=46){
+    ctx.fillStyle=x%92===0?'#1e1a14':'#1c1812';
+    ctx.fillRect(x,H*0.7,46,H*0.3);
+    ctx.strokeStyle='rgba(0,0,0,0.35)';ctx.lineWidth=.8;
+    ctx.strokeRect(x,H*0.7,46,H*0.3);
+  }
+  // back wall
+  ctx.fillStyle='#221c1a';ctx.fillRect(0,0,W,H*0.7);
+  // wall panel moulding
+  ctx.strokeStyle='rgba(255,255,255,0.035)';ctx.lineWidth=1;
+  ctx.strokeRect(38,18,W-76,H*0.7-28);
+  ctx.strokeRect(52,32,W-104,H*0.7-54);
+  // skirting
+  ctx.fillStyle='#2e261e';ctx.fillRect(0,H*0.7-10,W,14);
+
+  // ── Left window + curtains ──
+  ctx.fillStyle='#181210';ctx.fillRect(55,42,170,192);
+  ctx.fillStyle='#6a8a9a';ctx.fillRect(63,50,154,176);
+  ctx.fillStyle='#5a7a8a';ctx.fillRect(63,90,68,136);
+  ctx.fillStyle='#4a6a7a';ctx.fillRect(105,68,112,158);
+  ctx.fillStyle='rgba(200,220,230,0.12)';ctx.fillRect(63,50,154,176);
+  ctx.strokeStyle='#2a1e18';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(140,50);ctx.lineTo(140,226);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(63,140);ctx.lineTo(217,140);ctx.stroke();
+  ctx.strokeStyle='#221812';ctx.lineWidth=5;ctx.strokeRect(63,50,154,176);
+  // curtains
+  ctx.fillStyle=`rgb(${Math.round(room.curtainR)},${Math.round(room.curtainG)},${Math.round(room.curtainB)})`;
+  ctx.beginPath();ctx.moveTo(55,38);ctx.bezierCurveTo(76,54,70,118,86,236);ctx.lineTo(55,236);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(225,38);ctx.bezierCurveTo(204,54,210,118,196,236);ctx.lineTo(225,236);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#5a4a30';ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(40,38);ctx.lineTo(240,38);ctx.stroke();
+  ctx.fillStyle='#6a5a40';
+  ctx.beginPath();ctx.arc(40,38,5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(240,38,5,0,Math.PI*2);ctx.fill();
+
+  // ── Bookshelf right ──
+  ctx.fillStyle='#2a1e14';ctx.fillRect(575,22,172,252);
+  ctx.fillStyle='#1a1208';ctx.fillRect(575,22,172,7);
+  for(let s=0;s<4;s++){ctx.fillStyle='#2e2418';ctx.fillRect(575,22+s*60,172,7);}
+  // Static filler colors for untracked books
+  const bkFill=['#6a3a8a','#3a6a4a','#7a5a1a','#5a1a3a','#2a5a7a','#8a4a1a','#4a3a7a'];
+  // Tracked book positions: one prominent book per shelf, varied x positions
+  const tracked=[
+    {shelf:0, slotX:580},  // bk[0]
+    {shelf:0, slotX:614},  // bk[1]
+    {shelf:1, slotX:592},  // bk[2]
+    {shelf:1, slotX:624},  // bk[3]
+    {shelf:2, slotX:600},  // bk[4]
+    {shelf:3, slotX:588},  // bk[5]
+  ];
+  // Draw all 24 filler books first
+  for(let i=0;i<24;i++){
+    let bi=Math.floor(i/6),bxi=i%6;
+    ctx.fillStyle=bkFill[i%bkFill.length];
+    ctx.fillRect(580+bxi*22,30+bi*60,16+Math.sin(i*1.9)*3,50);
+    ctx.fillStyle='rgba(0,0,0,0.2)';ctx.fillRect(580+bxi*22,30+bi*60,1.5,50);
+  }
+  // Draw the 6 tracked books on top (wider, so they stand out)
+  tracked.forEach((t,i)=>{
+    let [r,g,b]=room.bk[i].map(Math.round);
+    ctx.fillStyle=`rgb(${r},${g},${b})`;
+    ctx.fillRect(t.slotX, 30+t.shelf*60, 24, 50);
+    ctx.fillStyle='rgba(255,255,255,0.06)';ctx.fillRect(t.slotX+2, 30+t.shelf*60, 4, 50);
+    ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(t.slotX, 30+t.shelf*60, 1.5, 50);
+  });
+  ctx.fillStyle='#5a4a30';ctx.beginPath();ctx.arc(666,84,8,0,Math.PI*2);ctx.fill();
+  if(room.bottleOnShelf){
+    ctx.fillStyle='#3a5a2a';ctx.fillRect(698,32,12,48);
+    ctx.fillStyle='#4a6a3a';ctx.fillRect(700,24,8,12);
+    ctx.fillStyle='#5a7a4a';ctx.fillRect(701,18,6,8);
+  }
+
+  // ── Fireplace ──
+  ctx.fillStyle='#1e1612';ctx.fillRect(278,95,224,188);
+  ctx.fillStyle='#2a2018';ctx.fillRect(290,108,200,168);
+  ctx.fillStyle='#0d0a08';ctx.fillRect(310,185,160,75);
+  let fg=ctx.createRadialGradient(390,248,6,390,228,72);
+  fg.addColorStop(0,'rgba(255,140,20,0.55)');fg.addColorStop(.5,'rgba(180,60,10,0.25)');fg.addColorStop(1,'transparent');
+  ctx.fillStyle=fg;ctx.fillRect(310,185,160,75);
+  ctx.fillStyle='#2a1808';ctx.fillRect(322,242,136,16);
+  ctx.fillStyle='#3a2010';ctx.fillRect(332,234,116,12);
+  let ff=Math.sin(elapsed*.008)*3+Math.cos(elapsed*.013)*2;
+  ctx.fillStyle='rgba(255,120,10,0.65)';
+  ctx.beginPath();ctx.moveTo(358,242);ctx.bezierCurveTo(353,212+ff,368,197,378,202+ff);ctx.bezierCurveTo(388,197,398,212-ff,393,242);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(255,185,45,0.45)';
+  ctx.beginPath();ctx.moveTo(368,242);ctx.bezierCurveTo(366,222+ff,373,210,380,214+ff);ctx.bezierCurveTo(387,210,389,222-ff,386,242);ctx.closePath();ctx.fill();
+  // mantle
+  ctx.fillStyle='#3a2e1e';ctx.fillRect(262,90,256,18);
+  ctx.fillStyle='#2e2418';ctx.fillRect(258,84,264,8);
+  // vase right on mantle — drawn here so it sits on top of the shelf
+  ctx.fillStyle=`rgb(${Math.round(room.vaseR)},${Math.round(room.vaseG)},${Math.round(room.vaseB)})`;
+  ctx.beginPath();ctx.moveTo(466,90);ctx.bezierCurveTo(476,90,480,83,478,70);ctx.bezierCurveTo(476,57,468,55,464,55);ctx.bezierCurveTo(460,55,452,57,450,70);ctx.bezierCurveTo(448,83,452,90,462,90);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.08)';ctx.beginPath();ctx.ellipse(461,70,3,13,-.3,0,Math.PI*2);ctx.fill();
+  // mantle clock — larger face so hand sweep is clearly visible
+  ctx.fillStyle='#2e2418';ctx.fillRect(358,42,62,56);
+  ctx.strokeStyle='#6a5a38';ctx.lineWidth=2;ctx.strokeRect(358,42,62,56);
+  // clock face
+  ctx.fillStyle='#f0e8c8';ctx.beginPath();ctx.arc(389,70,22,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#1a1210';ctx.beginPath();ctx.arc(389,70,20,0,Math.PI*2);ctx.fill();
+  // hour markers
+  ctx.strokeStyle='rgba(240,232,200,0.4)';ctx.lineWidth=1;
+  for(let m=0;m<12;m++){
+    let a=m/12*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(389+Math.cos(a)*16,70+Math.sin(a)*16);ctx.lineTo(389+Math.cos(a)*19,70+Math.sin(a)*19);ctx.stroke();
+  }
+  let hh=room.clockH, hm=room.clockM;
+  let ha=(hh%12/12)*Math.PI*2+(hm/60)*Math.PI/6-Math.PI/2;
+  let ma=(hm/60)*Math.PI*2-Math.PI/2;
+  // hour hand
+  ctx.strokeStyle='#f0e8c8';ctx.lineWidth=2.5;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(389,70);ctx.lineTo(389+Math.cos(ha)*11,70+Math.sin(ha)*11);ctx.stroke();
+  // minute hand
+  ctx.strokeStyle='#d4aa40';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(389,70);ctx.lineTo(389+Math.cos(ma)*16,70+Math.sin(ma)*16);ctx.stroke();
+  ctx.lineCap='butt';
+  // centre pip
+  ctx.fillStyle='#d4aa40';ctx.beginPath();ctx.arc(389,70,2,0,Math.PI*2);ctx.fill();
+  // candle left — brightness fades with room.candleAlpha
+  ctx.fillStyle='#e8e0c8';ctx.fillRect(288,56,10,36);
+  if(room.candleAlpha>0.01){
+    ctx.fillStyle=`rgba(255,200,60,${0.85*room.candleAlpha})`;ctx.beginPath();ctx.ellipse(293,53,4,8,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=`rgba(255,240,180,${0.55*room.candleAlpha})`;ctx.beginPath();ctx.ellipse(293,56,2,4,0,0,Math.PI*2);ctx.fill();
+  }
+  // ── Side table left ──
+  ctx.fillStyle='#2a1e12';ctx.fillRect(28,238,124,42);
+  ctx.fillStyle='#1e1408';ctx.fillRect(28,278,10,60);ctx.fillRect(142,278,10,60);
+  ctx.fillStyle='#221a10';ctx.fillRect(24,234,132,6);
+  // lamp — shape morphs via room.lampT (0=classic wide shade, 1=tall narrow modern)
+  ctx.fillStyle='#5a4a2a';ctx.beginPath();ctx.ellipse(90,240,12,5,0,0,Math.PI*2);ctx.fill();
+  // pole: elongates slightly as it modernises
+  let poleTop=190-room.lampT*18;
+  ctx.strokeStyle='#5a4a2a';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(90,240);ctx.lineTo(90,poleTop);ctx.stroke();
+  // shade: wide trapezoid morphs to narrow tall cylinder
+  let shadeW=56-room.lampT*34;   // half-width at bottom: 56→22
+  let shadeTW=40-room.lampT*28;  // half-width at top: 40→12
+  let shadeH=20+room.lampT*14;   // height: 20→34
+  ctx.fillStyle='#c8a050';
+  ctx.beginPath();
+  ctx.moveTo(90-shadeW, poleTop);
+  ctx.lineTo(90+shadeW, poleTop);
+  ctx.lineTo(90+shadeTW, poleTop-shadeH);
+  ctx.lineTo(90-shadeTW, poleTop-shadeH);
+  ctx.closePath();ctx.fill();
+  // inner glow on shade
+  ctx.fillStyle='rgba(255,220,120,0.18)';
+  ctx.beginPath();
+  ctx.moveTo(90-shadeW+4, poleTop);
+  ctx.lineTo(90+shadeW-4, poleTop);
+  ctx.lineTo(90+shadeTW-2, poleTop-shadeH+4);
+  ctx.lineTo(90-shadeTW+2, poleTop-shadeH+4);
+  ctx.closePath();ctx.fill();
+  // light pool on table below
+  let lg=ctx.createRadialGradient(90,240,0,90,240,80);
+  lg.addColorStop(0,'rgba(255,190,50,0.12)');lg.addColorStop(1,'transparent');
+  ctx.fillStyle=lg;ctx.fillRect(10,195,170,145);
+  // mug fades gradually — always draw the mug, use globalAlpha
+  ctx.globalAlpha=Math.max(0,room.mugAlpha);
+  ctx.fillStyle='#6a4a3a';ctx.fillRect(126,220,22,18);
+  ctx.fillStyle='#5a3a2a';ctx.fillRect(146,224,7,9);
+  ctx.fillStyle='#3a2818';ctx.fillRect(127,218,20,4);
+  ctx.globalAlpha=1;
+
+  // ── Picture frame ──
+  ctx.fillStyle=`rgb(${Math.round(room.frameR)},${Math.round(room.frameG)},${Math.round(room.frameB)})`;ctx.fillRect(418,35,106,96);
+  ctx.strokeStyle='rgba(0,0,0,0.45)';ctx.lineWidth=3;ctx.strokeRect(418,35,106,96);
+  ctx.fillStyle='rgba(0,0,0,0.18)';ctx.fillRect(426,43,90,80);
+  ctx.fillStyle='#4a6a7a';ctx.fillRect(428,66,42,57);
+  ctx.fillStyle='#3a5a6a';ctx.fillRect(464,50,48,73);
+  ctx.fillStyle='#6a8a6a';ctx.fillRect(428,96,84,26);
+  ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;ctx.strokeRect(426,43,90,80);
+
+  // ── Rug ──
+  ctx.fillStyle='#3a2a1e';ctx.beginPath();ctx.ellipse(390,H*0.73,230,30,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#5a3a22';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(390,H*0.73,224,25,0,0,Math.PI*2);ctx.stroke();
+  ctx.strokeStyle='rgba(180,120,60,0.18)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(390,H*0.73,185,18,0,0,Math.PI*2);ctx.stroke();
+
+  // ── Table for cups ──
+  ctx.fillStyle='#2a1e14';ctx.fillRect(120,H*0.7-8,540,16);
+  ctx.fillStyle='#221610';ctx.fillRect(145,H*0.7+8,14,55);ctx.fillRect(621,H*0.7+8,14,55);
+  ctx.fillStyle='#1e1410';ctx.fillRect(120,H*0.7-13,540,6);
+
+  // ── Cups (all identical) ──
+  let lifts=cupLifts||[0,0,0];
+  cups.forEach((cup,i)=>{
+    let cx=cup.x;
+    let ly=lifts[i]||0;
+    ctx.fillStyle='rgba(0,0,0,0.3)';
+    ctx.beginPath();ctx.ellipse(cx,H*0.7-6,28,6,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#3a2a1a';
+    ctx.beginPath();
+    ctx.moveTo(cx-30,H*0.7-6+ly);
+    ctx.bezierCurveTo(cx-30,H*0.7-6+ly,cx-22,H*0.7-66+ly,cx-18,H*0.7-72+ly);
+    ctx.lineTo(cx+18,H*0.7-72+ly);
+    ctx.bezierCurveTo(cx+22,H*0.7-66+ly,cx+30,H*0.7-6+ly,cx+30,H*0.7-6+ly);
+    ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(255,200,120,0.05)';
+    ctx.beginPath();
+    ctx.moveTo(cx-22,H*0.7-8+ly);ctx.bezierCurveTo(cx-22,H*0.7-8+ly,cx-14,H*0.7-64+ly,cx-10,H*0.7-70+ly);
+    ctx.lineTo(cx-4,H*0.7-70+ly);ctx.bezierCurveTo(cx-6,H*0.7-64+ly,cx-14,H*0.7-8+ly,cx-14,H*0.7-8+ly);
+    ctx.closePath();ctx.fill();
+    ctx.fillStyle='#4a3820';ctx.beginPath();ctx.ellipse(cx,H*0.7-72+ly,20,5,0,0,Math.PI*2);ctx.fill();
+  });
+
+  // ── Ball (only during reveal) ──
+  if(s1BallVisible){
+    let bx=cups[s1BallCup].x;
+    ctx.fillStyle='#c8902a';ctx.beginPath();ctx.arc(bx,H*0.7-8,13,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#e0b050';ctx.beginPath();ctx.arc(bx-2,H*0.7-11,8,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,240,0.55)';ctx.beginPath();ctx.arc(bx-5,H*0.7-14,4,0,Math.PI*2);ctx.fill();
+  }
+
+  // vignette
+  let vig=ctx.createRadialGradient(W/2,H/2,H*0.22,W/2,H/2,H*0.88);
+  vig.addColorStop(0,'transparent');vig.addColorStop(1,'rgba(0,0,0,0.52)');
+  ctx.fillStyle=vig;ctx.fillRect(0,0,W,H);
+}
+
+let s1ShuffleStarted=false;
+
+function beginShuffle(){
+  s1ShuffleStarted=true;
+  document.getElementById('ready-btn').style.display='none';
+  document.getElementById('s1-instr').textContent='Track it through the shuffle — then click the correct cup.';
+}
+
+function startStage1(){
+  show('s-stage1');
+  resetRoom();
+  // Always-on changes + clock + 2 random from the remainder
+  const alwaysOn=ALL_S1.filter(c=>c.alwaysOn||c.key==='clockHands');
+  const optional=ALL_S1.filter(c=>!c.alwaysOn&&c.key!=='clockHands').sort(()=>Math.random()-.5).slice(0,2);
+  s1ActiveChanges=[...alwaysOn,...optional];
+  s1ActiveChanges.forEach(c=>{c.started=false;c.startTime=0;c.done=false;});
+  s1ChangesMade=[];
+  s1BallTracked=false;s1PlayerCorrect=false;s1BallVisible=true;
+  s1ShuffleStarted=false;
+  s1InitBallCup=Math.floor(Math.random()*3);
+  s1BallCup=s1InitBallCup;
+  cups=[{x:160},{x:390},{x:620}];
+  s1Shuffles=genShuffles(12);
+  s1ShuffleDur=s1Shuffles.reduce((a,s)=>a+s.dur,0);
+
+  let c1=document.getElementById('c1');
+  c1.width=W;c1.height=H;
+  let ctx=c1.getContext('2d');
+  c1.style.cursor='default';c1.onclick=null;
+
+  let rb=document.getElementById('ready-btn');
+  rb.style.display='';rb.disabled=false;
+  document.getElementById('s1-instr').textContent='The ball is under one cup. Study the room. Click Ready when you want the shuffle to begin.';
+  document.getElementById('s1-status').textContent='';
+  document.getElementById('click-feedback').textContent='';
+  document.getElementById('click-feedback').className='';
+  document.getElementById('bar1').style.width='100%';
+
+  // All changes fire relative to shuffle start, spread across the shuffle duration
+  // triggerAt is set in seconds after shuffle begins
+  const shuffleChangeTimes=[300,800,1800,3000,4500,6000,7500];
+  s1ActiveChanges.forEach((c,i)=>{
+    c.triggerAt=shuffleChangeTimes[i]||300;
+  });
+
+  let lookStart=performance.now();
+  let shuffleStart=null;
+  let clickEnabled=false;
+
+  function loop(now){
+    let lookEl=now-lookStart;
+    let shuffleEl=shuffleStart?now-shuffleStart:null;
+
+    // Drive bg changes — all relative to shuffle start
+    if(shuffleEl!==null){
+      s1ActiveChanges.forEach(c=>{
+        if(shuffleEl>=c.triggerAt){
+          if(!c.started){c.started=true;c.startTime=shuffleEl;}
+          let t=Math.min(1,(shuffleEl-c.startTime)/c.duration);
+          c.apply(t);
+          if(t>=1&&!c.done){c.done=true;s1ChangesMade.push(c);}
+        }
+      });
+    }
+
+    let cupLifts=[0,0,0];
+    s1BallVisible=true;
+    cups=[{x:160},{x:390},{x:620}];
+    s1BallCup=s1InitBallCup;
+
+    if(s1ShuffleStarted){
+      if(!shuffleStart) shuffleStart=now;
+      let sEl=now-shuffleStart;
+      s1BallVisible=false;
+
+      if(sEl<s1ShuffleDur){
+        let st=shuffleAt(sEl);
+        cups[0].x=st.pos[0];cups[1].x=st.pos[1];cups[2].x=st.pos[2];
+        s1BallCup=st.ballCup;
+        if(st.swapA>=0){cupLifts[st.swapA]=st.liftA;cupLifts[st.swapB]=st.liftB;}
+      } else if(!clickEnabled&&!s1BallTracked){
+        clickEnabled=true;
+        let st=shuffleAt(s1ShuffleDur+1);
+        cups[0].x=st.pos[0];cups[1].x=st.pos[1];cups[2].x=st.pos[2];
+        s1BallCup=st.ballCup;
+        document.getElementById('s1-instr').textContent='Shuffle complete — click the cup hiding the ball.';
+        c1.style.cursor='pointer';
+        c1.onclick=handleCupClick;
+      }
+
+      // Progress bar runs during shuffle only
+      if(shuffleStart){
+        let shuffleTotalDur=s1ShuffleDur+5000;
+        document.getElementById('bar1').style.width=Math.max(0,(1-(now-shuffleStart)/shuffleTotalDur)*100)+'%';
+      }
+    }
+
+    drawRoom(ctx,lookEl,cupLifts);
+    if(!s1BallTracked) s1RAF=requestAnimationFrame(loop);
+  }
+  s1RAF=requestAnimationFrame(loop);
+}
+
+function handleCupClick(e){
+  let c1=document.getElementById('c1');
+  let rect=c1.getBoundingClientRect();
+  let mx=(e.clientX-rect.left)*(W/rect.width);
+  let clicked=-1;
+  cups.forEach((cup,i)=>{if(Math.abs(mx-cup.x)<40)clicked=i;});
+  if(clicked===-1)return;
+  c1.onclick=null;c1.style.cursor='default';
+  s1BallVisible=true;
+  s1BallTracked=true;
+  s1PlayerCorrect=(clicked===s1BallCup);
+  let fb=document.getElementById('click-feedback');
+  fb.textContent=s1PlayerCorrect?'Correct — you tracked the ball.':'Wrong cup. The shuffle misdirected you.';
+  fb.className=s1PlayerCorrect?'fb-correct':'fb-wrong';
+  cancelAnimationFrame(s1RAF);
+  let ctx=c1.getContext('2d');
+  drawRoom(ctx,99999,[0,0,0]);
+  setTimeout(showBetween,1800);
+}
+
+// Map each change key to its approximate location in the room canvas for annotation circles
+const CHANGE_LOCATIONS={
+  curtainColor: {x:140, y:130, r:60},
+  bookColors:   {x:628, y:130, r:68},
+  lampStyle:    {x:90,  y:195, r:48},
+  clockHands:   {x:389, y:70,  r:30},
+  mugAlpha:     {x:137, y:228, r:26},
+  pictureFrame: {x:471, y:83,  r:55},
+  candleAlpha:  {x:293, y:60,  r:22},
+  vaseColor:    {x:462, y:68,  r:28},
+};
+
+function showBetween(){
+  show('s-between');
+
+  // Change list — show all active changes, mark as noticed if fully completed
+  let ul=document.getElementById('s1-changes');ul.innerHTML='';
+  s1ActiveChanges.forEach(ch=>{
+    let noticed=ch.done;
+    let li=document.createElement('li');
+    li.innerHTML=`<span class="dot ${noticed?'dot-found':'dot-missed'}"></span><span>${ch.desc}</span>`;
+    ul.appendChild(li);
+  });
+
+  // Render BEFORE canvas — reset room to original, draw, restore current state
+  let savedRoom=JSON.parse(JSON.stringify(room));
+  resetRoom();
+  let cbef=document.getElementById('c-before');
+  cbef.width=W;cbef.height=H;
+  let bctx=cbef.getContext('2d');
+  drawRoom(bctx,0,[0,0,0]);
+
+  // Restore current (after) state and render AFTER canvas
+  room=savedRoom;
+  let caft=document.getElementById('c-after');
+  caft.width=W;caft.height=H;
+  let actx=caft.getContext('2d');
+  drawRoom(actx,0,[0,0,0]);
+
+  // Draw annotation circles on the after canvas for each active change
+  s1ActiveChanges.forEach(ch=>{
+    let loc=CHANGE_LOCATIONS[ch.key];
+    if(!loc)return;
+    actx.save();
+    actx.strokeStyle='rgba(220,180,60,0.9)';
+    actx.lineWidth=2.5;
+    actx.setLineDash([6,4]);
+    actx.beginPath();
+    actx.arc(loc.x,loc.y,loc.r,0,Math.PI*2);
+    actx.stroke();
+    // small filled dot at centre
+    actx.fillStyle='rgba(220,180,60,0.7)';
+    actx.beginPath();actx.arc(loc.x,loc.y,3,0,Math.PI*2);actx.fill();
+    actx.restore();
+  });
+}
+
+// ═══════════════════ STAGE 2 ═══════════════════
+
+let s2RAF=null,s2SelectedChanges=[];
+let s2State={};
+
+const ALL_S2=[
+  {key:'lampOff',     desc:'The street lamp went dark',                    apply:s=>{s.lampOn=false}},
+  {key:'signClosed',  desc:'The shop sign changed from OPEN to CLOSED',    apply:s=>{s.signText='CLOSED';s.signColor='#6a1a1a'}},
+  {key:'carGone',     desc:'The parked car disappeared',                    apply:s=>{s.carVisible=false}},
+  {key:'posterOff',   desc:'A poster on the shop wall was removed',         apply:s=>{s.posterVisible=false}},
+  {key:'crateAdded',  desc:'A wooden crate appeared on the pavement',       apply:s=>{s.crateVisible=true}},
+  {key:'benchColor',  desc:'The bench changed colour',                      apply:s=>{s.benchColor='#2a4a6a'}},
+  {key:'awningUp',    desc:'The shop awning was retracted',                 apply:s=>{s.awningOut=false}},
+  {key:'birdGone',    desc:'A pigeon on the ledge flew away',               apply:s=>{s.birdVisible=false}},
+  {key:'hydrantColor',desc:'The fire hydrant changed colour',               apply:s=>{s.hydrantColor='#2a4a2a'}},
+];
+
+function resetS2(){
+  s2State={
+    lampOn:true,signText:'OPEN',signColor:'#1a5a2a',
+    carVisible:true,posterVisible:true,crateVisible:false,
+    benchColor:'#5a3a1a',awningOut:true,birdVisible:true,hydrantColor:'#8a1a1a',
+  };
+}
+
+function drawStreet(ctx,elapsed){
+  ctx.clearRect(0,0,W,H);
+  let s=s2State;
+
+  // sky
+  let skyG=ctx.createLinearGradient(0,0,0,H*0.52);
+  skyG.addColorStop(0,'#4a7a9a');skyG.addColorStop(1,'#8ab8cc');
+  ctx.fillStyle=skyG;ctx.fillRect(0,0,W,H*0.52);
+  ctx.fillStyle='rgba(160,190,200,0.22)';ctx.fillRect(0,H*0.38,W,H*0.14);
+
+  // buildings
+  const blds=[
+    {x:0,y:32,w:135,h:196,c:'#2e2e38',wr:5,wc:3},
+    {x:145,y:12,w:155,h:218,c:'#282830',wr:6,wc:4},
+    {x:310,y:48,w:118,h:182,c:'#303038',wr:5,wc:3},
+    {x:438,y:22,w:148,h:208,c:'#2a2a34',wr:6,wc:3},
+    {x:596,y:52,w:184,h:178,c:'#2e2e3c',wr:5,wc:4},
+  ];
+  blds.forEach(b=>{
+    ctx.fillStyle=b.c;ctx.fillRect(b.x,b.y,b.w,b.h);
+    ctx.strokeStyle='rgba(0,0,0,0.4)';ctx.lineWidth=1;ctx.strokeRect(b.x,b.y,b.w,b.h);
+    for(let r=0;r<b.wr;r++) for(let c=0;c<b.wc;c++){
+      // static seeded pattern — no flicker
+      let seed=(b.x*7+r*13+c*31)%100;
+      let lit=seed>38;
+      ctx.fillStyle=lit?'rgba(255,220,140,0.55)':'rgba(30,30,40,0.8)';
+      ctx.fillRect(b.x+8+c*(b.w-16)/b.wc,b.y+10+r*(b.h-20)/b.wr,(b.w-16)/b.wc-4,(b.h-20)/b.wr-5);
+    }
+  });
+
+  // pavement
+  ctx.fillStyle='#3a3830';ctx.fillRect(0,H*0.52,W,H*0.48);
+  ctx.fillStyle='#323028';ctx.fillRect(0,H*0.52,W,H*0.06);
+  ctx.fillStyle='#4a4840';ctx.fillRect(0,H*0.55,W,4);
+  ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=.5;
+  for(let x=0;x<W;x+=42){ctx.beginPath();ctx.moveTo(x,H*0.56);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=H*0.56;y<H;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // shop facade
+  ctx.fillStyle='#2a2420';ctx.fillRect(55,H*0.22,230,H*0.33);
+  ctx.fillStyle='#221c18';ctx.fillRect(64,H*0.25,94,H*0.23);
+  ctx.fillStyle='#3a8a6a';ctx.fillRect(66,H*0.255,90,H*0.22);
+  ctx.fillStyle='rgba(200,240,220,0.09)';ctx.fillRect(66,H*0.255,90,H*0.22);
+  ctx.strokeStyle='#1e1814';ctx.lineWidth=3;ctx.strokeRect(64,H*0.25,94,H*0.23);
+  // door
+  ctx.fillStyle='#1e1814';ctx.fillRect(182,H*0.3,64,H*0.25);
+  ctx.fillStyle='#2a4a6a';ctx.fillRect(186,H*0.305,56,H*0.23);
+  ctx.strokeStyle='#0e0c0a';ctx.lineWidth=2;ctx.strokeRect(182,H*0.3,64,H*0.25);
+  ctx.fillStyle='#8a7a50';ctx.beginPath();ctx.arc(241,H*0.42,3,0,Math.PI*2);ctx.fill();
+  // awning
+  if(s.awningOut){
+    ctx.fillStyle='#8a2a1a';
+    ctx.beginPath();ctx.moveTo(50,H*0.22);ctx.lineTo(298,H*0.22);ctx.lineTo(288,H*0.33);ctx.lineTo(62,H*0.33);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='#6a1a0a';ctx.lineWidth=1;
+    for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(64+i*54,H*0.22);ctx.lineTo(67+i*54,H*0.33);ctx.stroke();}
+  }
+  // sign
+  ctx.fillStyle=s.signColor;ctx.fillRect(94,H*0.22-24,90,22);
+  ctx.fillStyle='#fff';ctx.font='500 11px IBM Plex Mono,monospace';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(s.signText,139,H*0.22-13);
+  // poster
+  if(s.posterVisible){
+    ctx.fillStyle='#c8b878';ctx.fillRect(64,H*0.5,32,40);
+    ctx.fillStyle='#4a6a8a';ctx.fillRect(67,H*0.505,26,22);
+    ctx.fillStyle='#3a4a3a';ctx.fillRect(67,H*0.505+24,26,12);
+    ctx.strokeStyle='rgba(0,0,0,0.28)';ctx.lineWidth=1;ctx.strokeRect(64,H*0.5,32,40);
+  }
+
+  // lamp post
+  ctx.strokeStyle='#5a5248';ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(352,H*0.56);ctx.lineTo(352,H*0.1);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(352,H*0.1);ctx.bezierCurveTo(352,H*0.06,384,H*0.06,384,H*0.1);ctx.stroke();
+  if(s.lampOn){
+    ctx.fillStyle='#fff8c0';ctx.beginPath();ctx.arc(386,H*0.1+8,9,0,Math.PI*2);ctx.fill();
+    let lg=ctx.createRadialGradient(386,H*0.1+8,2,386,H*0.1+8,52);
+    lg.addColorStop(0,'rgba(255,240,160,0.18)');lg.addColorStop(1,'transparent');
+    ctx.fillStyle=lg;ctx.fillRect(340,H*0.04,98,108);
+  } else {
+    ctx.fillStyle='#4a4440';ctx.beginPath();ctx.arc(386,H*0.1+8,9,0,Math.PI*2);ctx.fill();
+  }
+
+  // bench
+  ctx.fillStyle=s.benchColor;
+  ctx.fillRect(418,H*0.6,116,10);ctx.fillRect(418,H*0.6-15,116,8);
+  ctx.fillRect(422,H*0.6+10,13,22);ctx.fillRect(521,H*0.6+10,13,22);
+  ctx.fillStyle='rgba(0,0,0,0.28)';ctx.fillRect(418,H*0.6+30,116,4);
+
+  // hydrant
+  ctx.fillStyle=s.hydrantColor;
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(558,H*0.6-12,20,28,3);else ctx.rect(558,H*0.6-12,20,28);
+  ctx.fill();
+  ctx.fillRect(554,H*0.6+12,28,7);
+  ctx.fillStyle='rgba(0,0,0,0.28)';ctx.fillRect(560,H*0.6-12,4,28);
+
+  // car
+  if(s.carVisible){
+    let cx=642;
+    ctx.fillStyle='#3a3a5a';
+    ctx.beginPath();if(ctx.roundRect)ctx.roundRect(cx-68,H*0.56,136,38,5);else ctx.rect(cx-68,H*0.56,136,38);ctx.fill();
+    ctx.fillStyle='#2a2a42';
+    ctx.beginPath();if(ctx.roundRect)ctx.roundRect(cx-42,H*0.56-26,84,30,4);else ctx.rect(cx-42,H*0.56-26,84,30);ctx.fill();
+    ctx.fillStyle='rgba(140,180,210,0.58)';
+    ctx.fillRect(cx-36,H*0.56-22,32,20);ctx.fillRect(cx+4,H*0.56-22,32,20);
+    ctx.fillStyle='#111';
+    ctx.beginPath();ctx.arc(cx-38,H*0.56+38,14,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(cx+38,H*0.56+38,14,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#2a2a2a';
+    ctx.beginPath();ctx.arc(cx-38,H*0.56+38,7,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(cx+38,H*0.56+38,7,0,Math.PI*2);ctx.fill();
+  }
+
+  // crate
+  if(s.crateVisible){
+    ctx.fillStyle='#6a5030';ctx.fillRect(298,H*0.63-22,38,22);
+    ctx.strokeStyle='#4a3820';ctx.lineWidth=1.5;ctx.strokeRect(298,H*0.63-22,38,22);
+    ctx.beginPath();ctx.moveTo(317,H*0.63-22);ctx.lineTo(317,H*0.63);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(298,H*0.63-11);ctx.lineTo(336,H*0.63-11);ctx.stroke();
+  }
+
+  // pigeon
+  if(s.birdVisible){
+    let bx=202,by=H*0.365;
+    ctx.fillStyle='#6a6860';ctx.beginPath();ctx.ellipse(bx,by,9,5,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(bx+8,by+1,5,3,.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#888680';ctx.beginPath();ctx.ellipse(bx-2,by-2,4,2,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#c87a30';ctx.beginPath();ctx.moveTo(bx+13,by+2);ctx.lineTo(bx+18,by+2);ctx.lineTo(bx+16,by+4);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#e89050';ctx.beginPath();ctx.arc(bx-4,by-2,3,0,Math.PI*2);ctx.fill();
+  }
+
+  // walkers
+  function walker(baseX,spd,y,col,visible=true){
+    if(!visible)return;
+    let px;
+    if(spd>0) px=((baseX+elapsed*spd)%(W+80))-40;
+    else px=W-(((W-baseX)+elapsed*Math.abs(spd))%(W+80))+40;
+    let wb=Math.sin(elapsed*.006)*3;
+    ctx.fillStyle='#c4a07a';ctx.beginPath();ctx.arc(px,y-24,9,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=col;ctx.fillRect(px-8,y-15,16,26);
+    ctx.fillStyle='#c4a07a';ctx.fillRect(px+(spd>0?8:-16),y-12,8,18);
+    ctx.fillStyle='#1a1410';ctx.fillRect(px-8,y+11,7+wb,22);ctx.fillRect(px+1,y+11,7-wb,22);
+  }
+  walker(80,.018,255,'#3a4a6a');
+  walker(500,-.014,260,'#4a3a2a');
+  walker(310,.010,252,'#5a3a5a');
+
+  // scanlines
+  ctx.fillStyle='rgba(0,0,0,0.02)';
+  for(let y=0;y<H;y+=3)ctx.fillRect(0,y,W,1.5);
+
+  // vignette
+  let vg=ctx.createRadialGradient(W/2,H/2,H*0.2,W/2,H/2,H*0.9);
+  vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(0,0,0,0.44)');
+  ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+}
+
+function startStage2(){
+  show('s-stage2');
+  resetS2();
+  s2SelectedChanges=[...ALL_S2].sort(()=>Math.random()-.5).slice(0,4);
+  let schedule=s2SelectedChanges.map((ch,i)=>({time:3500+i*4400,ch,applied:false}));
+  let c2=document.getElementById('c2');
+  c2.width=W;c2.height=H;
+  let ctx=c2.getContext('2d');
+  let dur=23000,start=performance.now();
+  function loop(now){
+    let el=now-start;
+    document.getElementById('bar2').style.width=Math.max(0,(1-el/dur)*100)+'%';
+    let sec=Math.floor(el/1000);
+    document.getElementById('cam-time').textContent='CAM-01  00:'+String(sec).padStart(2,'0');
+    schedule.forEach(sc=>{if(!sc.applied&&el>sc.time){sc.ch.apply(s2State);sc.applied=true;}});
+    drawStreet(ctx,el);
+    if(el<dur)s2RAF=requestAnimationFrame(loop);
+    else showQuiz();
+  }
+  s2RAF=requestAnimationFrame(loop);
+}
+
+function showQuiz(){
+  show('s-quiz');
+  let all=[...ALL_S2].sort(()=>Math.random()-.5);
+  let div=document.getElementById('quiz-items');div.innerHTML='';
+  all.forEach(opt=>{
+    let row=document.createElement('div');row.className='quiz-item';
+    let cb=document.createElement('input');cb.type='checkbox';cb.id='cb_'+opt.key;
+    cb.dataset.real=s2SelectedChanges.some(s=>s.key===opt.key)?'1':'0';
+    let lb=document.createElement('label');lb.htmlFor='cb_'+opt.key;lb.textContent=opt.desc;
+    row.appendChild(cb);row.appendChild(lb);div.appendChild(row);
+  });
+}
+
+function scoreQuiz(){
+  let correct=0,total=s2SelectedChanges.length;
+  let s2Results=s2SelectedChanges.map(ch=>{
+    let cb=document.getElementById('cb_'+ch.key);
+    let found=cb&&cb.checked;if(found)correct++;
+    return{desc:ch.desc,found};
+  });
+  show('s-final');
+  document.getElementById('r1').textContent=s1PlayerCorrect?'✓':'✗';
+  document.getElementById('r1').style.color=s1PlayerCorrect?'#2d8a52':'#a03030';
+  document.getElementById('r2').textContent=correct+' / '+total;
+  let ul=document.getElementById('full-log');ul.innerHTML='';
+  s1ActiveChanges.filter(ch=>ch.done===true).forEach(ch=>{
+    let li=document.createElement('li');
+    li.innerHTML=`<span class="dot" style="background:var(--text3)"></span><span class="stage-tag">Stage 1</span><span>${ch.desc}</span>`;
+    ul.appendChild(li);
+  });
+  s2Results.forEach(r=>{
+    let li=document.createElement('li');
+    li.innerHTML=`<span class="dot ${r.found?'dot-found':'dot-missed'}"></span><span class="stage-tag">Stage 2</span><span>${r.desc}</span>`;
+    ul.appendChild(li);
+  });
+  let s1Completed=s1ActiveChanges.filter(c=>c.done).length;
+  let s1Missed=s1Completed;
+  let s2Pct=Math.round((correct/total)*100);
+  let ins='';
+  if(s1PlayerCorrect&&s2Pct>=75) ins=`You tracked the ball correctly but still missed ${s1Missed} change${s1Missed!==1?'s':''} in the room behind you. With full open attention in stage 2 you caught ${s2Pct}% of changes — better, but not complete. Focused attention creates a spotlight that darkens everything else. Unfocused attention is broad but insensitive to change without a target. Neither state is the reliable oversight we tend to assume.`;
+  else if(!s1PlayerCorrect&&s2Pct<50) ins=`The shuffle fooled you and open watching caught fewer than half the changes. There is no reliable attentional mode. Focused attention narrows the field to a single point. Unfocused attention lacks the sensitivity to detect change without a target. Human oversight depends on one of these two states — and neither performs as well as we assume.`;
+  else if(s1PlayerCorrect&&s2Pct<50) ins=`You tracked the ball — focused attention did its job. But without a focal task in stage 2, open awareness caught fewer than half the changes. Removing the distraction did not restore vigilance; it changed what kind of blindness you had. Focused attention is powerful but narrow. Unfocused attention is broad but insensitive. Neither is the reliable safeguard oversight frameworks assume.`;
+  else ins=`Stage 1 captured your attention on the ball and blinded you to ${s1Missed} background change${s1Missed!==1?'s':''}. Stage 2 removed the focal task — yet you still missed ${total-correct} change${total-correct!==1?'s':''} with open attention. Attention without direction is not the same as vigilance. Unfocused watching feels careful but produces different blind spots, not no blind spots. This directly challenges what "human oversight" of an automated system actually means in practice.`;
+  document.getElementById('final-insight').textContent=ins;
+}
+
+function restart(){
+  cancelAnimationFrame(s1RAF);
+  cancelAnimationFrame(s2RAF);
+  show('s-intro');
+}
+</script>
+</body>
+</html>
